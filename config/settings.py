@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-@5ghdemmvi&)eoko5)+z99lo2((d6crrzz+^4!a933tqrernzd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['smartec.uz']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'smartec.uz'
+]
 
 
 # Application definition
@@ -53,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'smart_storage.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -70,7 +73,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'smart_storage.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
