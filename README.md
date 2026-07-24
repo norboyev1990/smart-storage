@@ -2,7 +2,7 @@
 
 Store balance app — Telegram Mini App backend built with Django and Django REST Framework.
 
-## Features
+## Features SSS
 
 - **Users** — Telegram user management (buyer / seller roles)
 - **Products** — Inventory with IMEI tracking, pricing, and photo support
