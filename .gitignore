@@ -220,3 +220,5 @@ __marimo__/
 # developer ignore
 .idea/
 .python-version
+/public/static
+/public/media
