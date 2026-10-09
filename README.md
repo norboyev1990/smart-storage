@@ -37,7 +37,15 @@ cp .env.example .env   # VITE_API_URL=адрес backend
 npm run dev
 ```
 
-Вне Telegram приложение не может войти: для локальной разработки положите подписанную строку initData в `VITE_DEV_INIT_DATA` (её можно получить функцией `sign_init_data` в `backend/app/telegram_auth.py`).
+Вне Telegram приложение не может войти само. Для локальной проверки в обычном браузере сгенерируйте подписанную строку initData и положите её в `frontend/.env`:
+
+```bash
+cd backend
+python -m app.dev_init_data 111 Abdulla   # 111 — любой Telegram ID, Abdulla — имя
+# вывод вставьте в frontend/.env: VITE_DEV_INIT_DATA=<строка>
+```
+
+Строка действует 24 часа (`init_data_max_age_seconds`), потом сгенерируйте новую и перезапустите `npm run dev`.
 
 Чтобы открыть приложение в Telegram, frontend должен быть доступен по HTTPS. Укажите этот адрес в `WEBAPP_URL` бота и в BotFather (Bot Settings → Menu Button).
 
