@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: smart
+      POSTGRES_PASSWORD: smart
+      POSTGRES_DB: smart_storage
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://smart:smart@db:5432/smart_storage
+    ports: ["8000:8000"]
+    depends_on: [db]
+
+  bot:
+    build: ./backend
+    env_file: ./backend/.env
+    command: python -m app.bot
+    depends_on: [api]
+
+volumes:
+  pgdata:
