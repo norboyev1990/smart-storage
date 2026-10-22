@@ -19,7 +19,8 @@ declare global {
 export const tg: WebApp | undefined = window.Telegram?.WebApp
 
 export function getInitData(): string {
-  return tg?.initData || import.meta.env.VITE_DEV_INIT_DATA || ''
+  // The dev string must never reach a production build: it is a signed login for a real user
+  return tg?.initData || (import.meta.env.DEV ? import.meta.env.VITE_DEV_INIT_DATA : '') || ''
 }
 
 export function haptic(type: 'error' | 'success' | 'warning') {
