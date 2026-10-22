@@ -5,6 +5,7 @@ import time
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["BOT_TOKEN"] = "123456:TEST"
 os.environ["JWT_SECRET"] = "test-secret-key-that-is-long-enough-123"
+os.environ["ADMIN_PASSWORD"] = "admin-test-password"
 
 import pytest
 from fastapi.testclient import TestClient

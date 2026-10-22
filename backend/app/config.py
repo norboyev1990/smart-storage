@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     api_url: str = ""
     webhook_secret: str = ""
     cors_origins: list[str] = ["http://localhost:5173"]
+    # Web admin panel at {api_url}/admin; disabled while the password is empty
+    admin_username: str = "admin"
+    admin_password: str = ""
 
 
 @lru_cache
