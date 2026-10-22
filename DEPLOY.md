@@ -148,6 +148,7 @@ cPanel → **Backup** позволяет скачать дамп PostgreSQL. Д�
 ## Если что-то не работает
 
 - **`no pg_hba.conf entry for host ...` при миграции**: на cPanel вход разрешён, только если пользователь привязан к базе (правило `samerole`). В **PostgreSQL Databases** в блоке «Add User To Database» выберите пользователя и базу и нажмите **Submit**, затем внизу **Synchronize Grants**. Строку подключения используйте через сокет из шага 2.
+- **«We're sorry, but something went wrong» от Passenger**: проверьте, что cPanel не заменил `passenger_wsgi.py` своим шаблоном (он использует `imp`, которого нет в Python 3.12). Правильный файл содержит `from a2wsgi import ASGIMiddleware`. Быстрая проверка: `python -c "import passenger_wsgi"` в окружении приложения.
 - **Ошибка 500 или «Web application could not be started»**: откройте `~/smart-storage-api/stderr.log` (или лог Passenger), там будет причина. Частые причины: не выполнен `pip install`, нет файла `.env` или в нём неверный `DATABASE_URL`, `CORS_ORIGINS` не в формате JSON.
 - **Бот не отвечает на /start**: проверьте `https://api.telegram.org/bot<ТОКЕН>/getWebhookInfo` в браузере. В поле `last_error_message` будет причина. После смены `WEBHOOK_SECRET` или домена выполните `python manage.py set-webhook` ещё раз.
 - **Mini App открывается, но вход не работает**: проверьте, что `CORS_ORIGINS` совпадает с адресом фронтенда, а фронтенд собран с правильным `VITE_API_URL`.
