@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     jwt_ttl_hours: int = 24
     init_data_max_age_seconds: int = 24 * 3600
     webapp_url: str = ""
+    # Public URL of the API; the bot receives updates at {api_url}/telegram/webhook
+    api_url: str = ""
+    webhook_secret: str = ""
     cors_origins: list[str] = ["http://localhost:5173"]
 
 
