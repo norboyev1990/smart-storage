@@ -49,6 +49,10 @@ python -m app.dev_init_data 111 Abdulla   # 111 — любой Telegram ID, Abdu
 
 Чтобы открыть приложение в Telegram, frontend должен быть доступен по HTTPS. Укажите этот адрес в `WEBAPP_URL` бота и в BotFather (Bot Settings → Menu Button).
 
+## Деплой
+
+Пошаговая инструкция для хостинга с cPanel (ahost.uz): [DEPLOY.md](DEPLOY.md). На сервере бот работает через вебхук `/telegram/webhook` внутри backend. После первой настройки каждый пуш в `main` выкладывается автоматически через GitHub Actions (`.github/workflows/deploy.yml`).
+
 ## Как устроен API
 
 - `POST /auth/telegram`: проверка подписи initData токеном бота, выдача JWT.
