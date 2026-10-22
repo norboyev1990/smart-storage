@@ -18,13 +18,15 @@
 
 1. cPanel → **PostgreSQL Databases**: создайте базу (например, `smart`) и пользователя с длинным паролем, добавьте пользователя в базу со всеми правами.
 2. cPanel добавляет к именам префикс аккаунта, например `cpuser_smart`. Запишите полные имена.
-3. Строка подключения:
+3. Строка подключения. На cPanel PostgreSQL обычно не принимает подключения по TCP (`localhost`/`127.0.0.1`), только через unix-сокет, поэтому хост указывается параметром `host=` с путём к папке сокета:
 
    ```
-   postgresql+psycopg://cpuser_smartuser:ПАРОЛЬ@localhost:5432/cpuser_smart
+   postgresql+psycopg://cpuser_smartuser:ПАРОЛЬ@/cpuser_smart?host=/var/run/postgresql
    ```
 
-   Если в пароле есть символы `@ : / # %`, замените их URL-кодом (`@` → `%40`) или выберите пароль из букв и цифр.
+   Где лежит сокет, можно проверить по SSH: `ls /var/run/postgresql/.s.PGSQL.5432 /tmp/.s.PGSQL.5432`. Если файл есть только в `/tmp`, укажите `host=/tmp`. Проверить логин и пароль: `psql -h /var/run/postgresql -U cpuser_smartuser cpuser_smart`.
+
+   Если в пароле есть символы `@ : / # % ?`, замените их URL-кодом (`@` → `%40`) или выберите пароль из букв и цифр.
 
 ## 3. Загрузка backend (FastAPI)
 
@@ -138,13 +140,14 @@ GitHub → репозиторий → **Settings → Environments → New enviro
 cPanel → **Backup** позволяет скачать дамп PostgreSQL. Делайте это регулярно, или настройте **Cron Jobs**:
 
 ```
-0 3 * * * pg_dump "postgresql://cpuser_smartuser:ПАРОЛЬ@localhost/cpuser_smart" | gzip > ~/backups/smart-$(date +\%F).sql.gz
+0 3 * * * pg_dump "postgresql://cpuser_smartuser:ПАРОЛЬ@/cpuser_smart?host=/var/run/postgresql" | gzip > ~/backups/smart-$(date +\%F).sql.gz
 ```
 
 (папку `~/backups` создайте заранее, она не должна быть внутри `public_html`).
 
 ## Если что-то не работает
 
+- **`no pg_hba.conf entry for host "127.0.0.1"` при миграции**: база не пускает по TCP. Используйте строку подключения через сокет из шага 2 (`@/имя_базы?host=/var/run/postgresql`).
 - **Ошибка 500 или «Web application could not be started»**: откройте `~/smart-storage-api/stderr.log` (или лог Passenger), там будет причина. Частые причины: не выполнен `pip install`, нет файла `.env` или в нём неверный `DATABASE_URL`, `CORS_ORIGINS` не в формате JSON.
 - **Бот не отвечает на /start**: проверьте `https://api.telegram.org/bot<ТОКЕН>/getWebhookInfo` в браузере. В поле `last_error_message` будет причина. После смены `WEBHOOK_SECRET` или домена выполните `python manage.py set-webhook` ещё раз.
 - **Mini App открывается, но вход не работает**: проверьте, что `CORS_ORIGINS` совпадает с адресом фронтенда, а фронтенд собран с правильным `VITE_API_URL`.
