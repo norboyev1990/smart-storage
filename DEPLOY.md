@@ -49,7 +49,11 @@
    WEBAPP_URL=https://your-domain.uz
    API_URL=https://api.your-domain.uz
    CORS_ORIGINS=["https://your-domain.uz"]
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=длинный пароль для админ-панели
    ```
+
+   Админ-панель открывается по адресу `https://api.your-domain.uz/admin` (логин и пароль из `ADMIN_USERNAME` и `ADMIN_PASSWORD`). Пока `ADMIN_PASSWORD` пустой, панель выключена. После изменения `.env` перезапустите приложение (`touch tmp/restart.txt`).
 
    Случайную строку можно получить командой `openssl rand -hex 32`. Файл `.env` читают и сайт, и команды по SSH, поэтому переменные лучше хранить в нём, а не в «Environment variables» cPanel (их не видно из SSH). Не отправляйте эти значения никому, в том числе в чат. Деплой из GitHub этот файл не трогает.
 

@@ -7,3 +7,6 @@ psycopg[binary]==3.3.6
 PyJWT==2.15.1
 aiogram==3.31.0
 a2wsgi==1.10.10
+sqladmin[i18n]==0.32.0
+itsdangerous==2.2.0
+greenlet==3.5.6  # sqladmin imports SQLAlchemy's asyncio module

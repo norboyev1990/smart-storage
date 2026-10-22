@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.admin import mount_admin
 from app.config import get_settings
 from app.routers import auth, clients, phones, reports, shops, telegram
 
@@ -15,6 +16,8 @@ app.add_middleware(
 
 for module in (auth, shops, clients, phones, reports, telegram):
     app.include_router(module.router)
+
+mount_admin(app)
 
 
 @app.get("/health", tags=["health"])
