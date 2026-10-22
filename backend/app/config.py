@@ -1,10 +1,12 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # backend/.env, wherever the process starts (Passenger, manage.py over SSH, uvicorn)
+    model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parent.parent / ".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://smart:smart@localhost:5432/smart_storage"
     bot_token: str = ""

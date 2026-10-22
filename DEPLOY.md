@@ -28,48 +28,42 @@
 
 ## 3. Загрузка backend
 
-1. Загрузите содержимое папки `backend/` в `~/smart-storage-api/` (через **File Manager** архивом `.zip` и «Extract», или через Git™ Version Control в cPanel). Папки `tests/`, `.venv/` и файл `.env` с вашего компьютера не нужны.
+1. Загрузите содержимое папки `backend/` в `~/smart-storage-api/` (архивом через **File Manager** или `rsync`/`scp` по SSH). Папки `tests/`, `.venv/` и файл `.env` с вашего компьютера не нужны. Дальше обновления будет загружать GitHub Actions.
 2. cPanel → **Setup Python App** → **Create Application**:
    - Python version: **3.13** (или 3.12)
    - Application root: `smart-storage-api`
    - Application URL: `api.your-domain.uz` (корень, без пути)
    - Application startup file: `passenger_wsgi.py`
    - Application Entry point: `application`
-3. В том же окне в **Environment variables** добавьте:
+3. Нажмите **Create**. Вверху страницы приложения cPanel покажет команду активации окружения вида
+   `source /home/cpuser/virtualenv/smart-storage-api/3.13/bin/activate && cd /home/cpuser/smart-storage-api`. Запишите путь до `activate`, он понадобится для GitHub Actions.
+4. Создайте в `~/smart-storage-api/` файл `.env` (через File Manager или по SSH) и сделайте его доступным только вам (`chmod 600 .env`):
 
-   | Переменная | Значение |
-   |---|---|
-   | `DATABASE_URL` | строка из шага 2 |
-   | `BOT_TOKEN` | токен от @BotFather |
-   | `JWT_SECRET` | случайная строка из 64 символов |
-   | `WEBHOOK_SECRET` | ещё одна случайная строка (только латиница и цифры) |
-   | `WEBAPP_URL` | `https://your-domain.uz` |
-   | `API_URL` | `https://api.your-domain.uz` |
-   | `CORS_ORIGINS` | `["https://your-domain.uz"]` (именно с кавычками и скобками) |
+   ```
+   DATABASE_URL=строка из шага 2
+   BOT_TOKEN=токен от @BotFather
+   JWT_SECRET=случайная строка из 64 символов
+   WEBHOOK_SECRET=ещё одна случайная строка (только латиница и цифры)
+   WEBAPP_URL=https://your-domain.uz
+   API_URL=https://api.your-domain.uz
+   CORS_ORIGINS=["https://your-domain.uz"]
+   ```
 
-   Случайную строку можно получить командой `openssl rand -hex 32` или любым генератором паролей. Не отправляйте эти значения никому, в том числе в чат.
-4. Нажмите **Create**, затем внизу в поле «Configuration files» укажите `requirements.txt` и нажмите **Run Pip Install**.
+   Случайную строку можно получить командой `openssl rand -hex 32`. Файл `.env` читают и сайт, и команды по SSH, поэтому переменные лучше хранить в нём, а не в «Environment variables» cPanel (их не видно из SSH). Не отправляйте эти значения никому, в том числе в чат. Деплой из GitHub этот файл не трогает.
 
-## 4. Миграции и вебхук бота
+## 4. Зависимости, миграции и вебхук бота
 
-В **Setup Python App** у приложения есть поле **Execute python script**. Выполните по очереди:
-
-```
-manage.py migrate
-manage.py set-webhook
-```
-
-Должно появиться `Migrations applied` и `Webhook set: https://api.your-domain.uz/telegram/webhook`.
-
-Если в тарифе есть **Terminal** (или SSH), то же самое можно сделать там. Команду активации окружения cPanel показывает вверху страницы приложения:
+Зайдите по SSH (или в **Terminal** cPanel) и выполните, подставив свою команду активации:
 
 ```bash
 source /home/cpuser/virtualenv/smart-storage-api/3.13/bin/activate && cd ~/smart-storage-api
+pip install -r requirements.txt
 python manage.py migrate
 python manage.py set-webhook
+mkdir -p tmp && touch tmp/restart.txt   # перезапуск приложения
 ```
 
-Нажмите **Restart** у приложения и откройте `https://api.your-domain.uz/health`. Ответ `{"status":"ok"}` значит, что backend работает. Документация API: `https://api.your-domain.uz/docs`.
+Должно появиться `Migrations applied` и `Webhook set: https://api.your-domain.uz/telegram/webhook`. Откройте `https://api.your-domain.uz/health`: ответ `{"status":"ok"}` значит, что backend работает. Документация API: `https://api.your-domain.uz/docs`.
 
 ## 5. Фронтенд
 
@@ -90,9 +84,51 @@ VITE_API_URL=https://api.your-domain.uz npm run build
 1. @BotFather → ваш бот → **Bot Settings → Menu Button**: укажите `https://your-domain.uz`.
 2. Отправьте боту `/start`. Должна появиться кнопка «Открыть Smart Storage».
 
-## Обновление
+## Автоматический деплой через GitHub Actions
 
-- Backend: загрузите изменённые файлы, при изменении `requirements.txt` снова **Run Pip Install**, при новых миграциях `manage.py migrate`, затем **Restart**.
+После первой ручной настройки (шаги 1–6) обновления выкладываются сами: файл `.github/workflows/deploy.yml` на каждый пуш в `main` запускает тесты, собирает фронтенд, загружает файлы по SSH, ставит зависимости, применяет миграции и перезапускает приложение. На pull request запускаются только тесты.
+
+### Ключ для GitHub
+
+На своём компьютере создайте отдельный ключ только для деплоя (без пароля):
+
+```bash
+ssh-keygen -t ed25519 -f ahost_deploy -N "" -C github-actions
+```
+
+1. cPanel → **SSH Access → Manage SSH Keys → Import Key**: вставьте содержимое `ahost_deploy.pub`, затем нажмите **Manage → Authorize**.
+2. Узнайте отпечаток сервера: `ssh-keyscan -p ПОРТ ваш-сервер.ahost.uz` (порт и адрес SSH указаны в cPanel или в письме от ahost).
+
+### Настройки репозитория
+
+GitHub → репозиторий → **Settings → Environments → New environment** с именем `production`. В нём добавьте:
+
+**Secrets** (секретные):
+
+| Имя | Значение |
+|---|---|
+| `SSH_HOST` | адрес SSH сервера |
+| `SSH_PORT` | порт SSH (если не 22) |
+| `SSH_USER` | логин cPanel |
+| `SSH_PRIVATE_KEY` | всё содержимое файла `ahost_deploy` (приватный ключ) |
+| `SSH_KNOWN_HOSTS` | вывод `ssh-keyscan` |
+
+**Variables** (обычные):
+
+| Имя | Значение |
+|---|---|
+| `API_URL` | `https://api.your-domain.uz` |
+| `VENV_ACTIVATE` | путь до `activate`, например `/home/cpuser/virtualenv/smart-storage-api/3.13/bin/activate` |
+| `APP_DIR` | папка backend, если не `smart-storage-api` |
+| `WEB_DIR` | папка фронтенда, если не `public_html` |
+
+После этого любой пуш в `main` (или кнопка **Actions → Test and deploy → Run workflow**) выкладывает новую версию. Если тесты не прошли, деплой не запускается. Ход и ошибки видны во вкладке **Actions**. После деплоя workflow сам проверяет `API_URL/health`.
+
+Приватный ключ после добавления в GitHub с компьютера можно удалить. Если он утёк, удалите ключ в cPanel → SSH Access и создайте новый.
+
+## Ручное обновление (без GitHub Actions)
+
+- Backend: загрузите изменённые файлы и повторите команды из шага 4 (кроме `set-webhook`).
 - Frontend: снова соберите и замените файлы в `public_html/`.
 
 ## Резервные копии
@@ -107,11 +143,12 @@ cPanel → **Backup** позволяет скачать дамп PostgreSQL. Д�
 
 ## Если что-то не работает
 
-- **Ошибка 500 или «Web application could not be started»**: откройте `~/smart-storage-api/stderr.log` (или лог Passenger), там будет причина. Частые причины: не выполнен Pip Install, неверный `DATABASE_URL`, `CORS_ORIGINS` не в формате JSON.
-- **Бот не отвечает на /start**: проверьте `https://api.telegram.org/bot<ТОКЕН>/getWebhookInfo` в браузере. В поле `last_error_message` будет причина. После смены `WEBHOOK_SECRET` или домена выполните `manage.py set-webhook` ещё раз.
+- **Ошибка 500 или «Web application could not be started»**: откройте `~/smart-storage-api/stderr.log` (или лог Passenger), там будет причина. Частые причины: не выполнен `pip install`, нет файла `.env` или в нём неверный `DATABASE_URL`, `CORS_ORIGINS` не в формате JSON.
+- **Бот не отвечает на /start**: проверьте `https://api.telegram.org/bot<ТОКЕН>/getWebhookInfo` в браузере. В поле `last_error_message` будет причина. После смены `WEBHOOK_SECRET` или домена выполните `python manage.py set-webhook` ещё раз.
 - **Mini App открывается, но вход не работает**: проверьте, что `CORS_ORIGINS` совпадает с адресом фронтенда, а фронтенд собран с правильным `VITE_API_URL`.
+- **Деплой в Actions падает на SSH**: проверьте `SSH_HOST`, `SSH_PORT`, что ключ авторизован в cPanel и что `SSH_KNOWN_HOSTS` получен для того же порта.
 - **Хостинг не даёт исходящие запросы к api.telegram.org**: напишите в поддержку ahost, чтобы открыли доступ, иначе бот не сможет отвечать.
 
 ## Локальная разработка
 
-Ничего не меняется: `python -m app.bot` по-прежнему запускает бота в режиме polling (он сам снимает вебхук). После локального запуска на рабочем токене снова выполните `manage.py set-webhook` на сервере.
+Ничего не меняется: `python -m app.bot` по-прежнему запускает бота в режиме polling (он сам снимает вебхук). После локального запуска на рабочем токене снова выполните `python manage.py set-webhook` на сервере. Удобнее завести для разработки отдельного тестового бота.

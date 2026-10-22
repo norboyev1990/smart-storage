@@ -1,0 +1,82 @@
+# Tests every push and PR; on main also deploys to cPanel hosting over SSH (see DEPLOY.md).
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+        working-directory: backend
+      - run: pytest -q
+        working-directory: backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: frontend
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      APP_DIR: ${{ vars.APP_DIR || 'smart-storage-api' }}
+      WEB_DIR: ${{ vars.WEB_DIR || 'public_html' }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend
+        run: npm ci && npm run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.API_URL }}
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf 'Host target\n  HostName %s\n  User %s\n  Port %s\n  IdentityFile ~/.ssh/id_deploy\n' \
+            "${{ secrets.SSH_HOST }}" "${{ secrets.SSH_USER }}" "$SSH_PORT" > ~/.ssh/config
+      - name: Upload backend
+        run: >
+          rsync -az --delete
+          --exclude .env --exclude tests/ --exclude __pycache__/ --exclude '*.db'
+          --exclude tmp/ --exclude public/ --exclude .htaccess --exclude '*.log'
+          backend/ "target:$APP_DIR/"
+      - name: Install dependencies, migrate, restart
+        run: |
+          ssh target "set -e
+            cd \$HOME/$APP_DIR
+            source ${{ vars.VENV_ACTIVATE }}
+            pip install -q -r requirements.txt
+            python manage.py migrate
+            mkdir -p tmp && touch tmp/restart.txt"
+      - name: Upload frontend
+        run: rsync -az frontend/dist/ "target:$WEB_DIR/"
+      - name: Check API
+        run: curl -fsS --retry 5 --retry-delay 3 --retry-all-errors "${{ vars.API_URL }}/health"

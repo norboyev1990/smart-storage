@@ -51,7 +51,7 @@ python -m app.dev_init_data 111 Abdulla   # 111 — любой Telegram ID, Abdu
 
 ## Деплой
 
-Пошаговая инструкция для хостинга с cPanel (ahost.uz): [DEPLOY.md](DEPLOY.md). На сервере бот работает через вебхук `/telegram/webhook` внутри backend.
+Пошаговая инструкция для хостинга с cPanel (ahost.uz): [DEPLOY.md](DEPLOY.md). На сервере бот работает через вебхук `/telegram/webhook` внутри backend. После первой настройки каждый пуш в `main` выкладывается автоматически через GitHub Actions (`.github/workflows/deploy.yml`).
 
 ## Как устроен API
 
